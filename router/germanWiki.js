@@ -19,6 +19,31 @@ const {
 
 
 const germanWikiRouter = express.Router();
+const wiktionaryClient = axios.create({
+  headers: {
+    "User-Agent": "JSONCard/1.0 (+https://thegeneralapps.com)",
+    Accept: "application/json"
+  },
+  timeout: 10000
+});
+
+const formatUpstreamError = (error, fallbackMessage) => {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status || 502;
+    return {
+      status,
+      body: {
+        message: fallbackMessage,
+        upstreamStatus: error.response?.status || null,
+        upstreamStatusText: error.response?.statusText || null
+      }
+    };
+  }
+  return {
+    status: 500,
+    body: { message: error.message || fallbackMessage }
+  };
+};
 
 
 const searchWord = (word) => {
@@ -27,7 +52,7 @@ const searchWord = (word) => {
 
 const getPageListForWord = async (word) => {
   const url = searchWord(word);
-  const res = await axios.get(encodeURI(url));
+  const res = await wiktionaryClient.get(encodeURI(url));
   const pages = res?.data?.query?.pages || [];
   return Object.keys(pages).map((k) => ({ ...pages[k] }));
 
@@ -45,7 +70,8 @@ germanWikiRouter.get('/search/:word', async(req,res) => {
     }
   }
   catch (e) {
-    res.status(500).send(JSON.stringify({ message: e.message || "unexpected error" }));
+    const { status, body } = formatUpstreamError(e, "Failed to load German Wiki search results");
+    res.status(status).send(JSON.stringify(body));
   }
 })
 
@@ -55,7 +81,7 @@ const gotoPage = (pageId, section = 1) => {
 
 const loadPageData = async (pageId, section = 1) => {
   const url = gotoPage(pageId, section);
-  const { data } = await axios.get(url);
+  const { data } = await wiktionaryClient.get(url);
   if (data.parse) {
     const { title, text, pageid } = data.parse;
     return { title, text, pageid };
@@ -112,7 +138,8 @@ germanWikiRouter.get('/page/:id', async (req, res) => {
   }
   catch (e) {
     console.log(e);
-    res.status(500).send(JSON.stringify({ message: e.message || "unexpected error" }));
+    const { status, body } = formatUpstreamError(e, "Failed to load German Wiki page data");
+    res.status(status).send(JSON.stringify(body));
   }
 })
 
