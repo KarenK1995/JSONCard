@@ -17,8 +17,20 @@
           </p>
         </div>
         <div class="controls">
-          <label for="language">Language</label>
-          <select id="language" name="language" aria-label="Select language"></select>
+          <div class="control">
+            <label for="language">Language</label>
+            <select id="language" name="language" aria-label="Select language"></select>
+          </div>
+          <div class="control">
+            <label for="search">Search</label>
+            <input
+              id="search"
+              name="search"
+              type="search"
+              placeholder="Search lessons"
+              autocomplete="off"
+            />
+          </div>
         </div>
       </header>
 
@@ -57,6 +69,7 @@
       const statusEl = document.querySelector("[data-status]");
       const levelsEl = document.querySelector("[data-levels]");
       const languageSelect = document.querySelector("#language");
+      const searchInput = document.querySelector("#search");
 
       const queryParams = new URLSearchParams(window.location.search);
       const initialLanguage = (queryParams.get("ln") || "en").toLowerCase();
@@ -72,13 +85,59 @@
         statusEl.className = `status status--${type}`;
       };
 
-      const renderLevels = (structure, language) => {
+      const normalizeQuery = (value) => value.trim().toLowerCase();
+
+      const appendHighlightedText = (container, text, query) => {
+        container.textContent = "";
+        if (!text) {
+          return;
+        }
+
+        if (!query) {
+          container.textContent = text;
+          return;
+        }
+
+        const normalizedText = text.toLowerCase();
+        const normalizedQuery = query.toLowerCase();
+        let startIndex = 0;
+        let matchIndex = normalizedText.indexOf(normalizedQuery, startIndex);
+
+        while (matchIndex !== -1) {
+          if (matchIndex > startIndex) {
+            container.append(text.slice(startIndex, matchIndex));
+          }
+
+          const highlight = document.createElement("mark");
+          highlight.className = "search-highlight";
+          highlight.textContent = text.slice(matchIndex, matchIndex + query.length);
+          container.append(highlight);
+
+          startIndex = matchIndex + query.length;
+          matchIndex = normalizedText.indexOf(normalizedQuery, startIndex);
+        }
+
+        if (startIndex < text.length) {
+          container.append(text.slice(startIndex));
+        }
+      };
+
+      const renderLevels = (structure, language, query = "") => {
         levelsEl.innerHTML = "";
         const levels = structure.levels || [];
         if (!levels.length) {
           setStatus("No lessons found yet.", "warning");
           return;
         }
+
+        const trimmedQuery = query.trim();
+        const normalizedQuery = normalizeQuery(query);
+        let totalLessons = 0;
+        let totalMatches = 0;
+
+        levels.forEach((level) => {
+          totalLessons += (level.chapters || []).length;
+        });
 
         levels.forEach((level) => {
           const section = document.createElement("section");
@@ -92,7 +151,21 @@
 
           const count = document.createElement("p");
           const chapters = level.chapters || [];
-          count.textContent = `${chapters.length} lessons`;
+          const filteredChapters = normalizedQuery
+            ? chapters.filter((chapter) => {
+                const haystack = `${chapter.id} ${chapter.title} ${chapter.description || ""}`.toLowerCase();
+                return haystack.includes(normalizedQuery);
+              })
+            : chapters;
+
+          totalMatches += filteredChapters.length;
+          count.textContent = normalizedQuery
+            ? `${filteredChapters.length} of ${chapters.length} lessons`
+            : `${chapters.length} lessons`;
+
+          if (normalizedQuery && filteredChapters.length === 0) {
+            return;
+          }
 
           header.appendChild(title);
           header.appendChild(count);
@@ -101,7 +174,7 @@
           const grid = document.createElement("div");
           grid.className = "lesson-grid";
 
-          chapters.forEach((chapter) => {
+          filteredChapters.forEach((chapter) => {
             const card = document.createElement("article");
             card.className = "lesson-card";
 
@@ -110,16 +183,16 @@
 
             const idBadge = document.createElement("span");
             idBadge.className = "lesson-card__badge";
-            idBadge.textContent = chapter.id;
+            appendHighlightedText(idBadge, chapter.id, trimmedQuery);
 
             const cardTitle = document.createElement("h3");
-            cardTitle.textContent = chapter.title;
+            appendHighlightedText(cardTitle, chapter.title, trimmedQuery);
 
             cardHeader.appendChild(idBadge);
             cardHeader.appendChild(cardTitle);
 
             const description = document.createElement("p");
-            description.textContent = chapter.description || "";
+            appendHighlightedText(description, chapter.description || "", trimmedQuery);
 
             const link = document.createElement("a");
             link.href = buildLessonUrl(chapter.id, language);
@@ -135,6 +208,40 @@
           section.appendChild(grid);
           levelsEl.appendChild(section);
         });
+
+        if (normalizedQuery) {
+          if (totalMatches === 0) {
+            setStatus(`No lessons match "${trimmedQuery}".`, "warning");
+          } else {
+            setStatus(`Showing ${totalMatches} of ${totalLessons} lessons.`, "info");
+          }
+        } else {
+          setStatus("", "info");
+        }
+      };
+
+      const updateQueryParam = (key, value) => {
+        if (value) {
+          queryParams.set(key, value);
+        } else {
+          queryParams.delete(key);
+        }
+        const newUrl = queryParams.toString()
+          ? `${window.location.pathname}?${queryParams.toString()}`
+          : window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+      };
+
+      let currentStructure = null;
+      let currentLanguage = initialLanguage;
+
+      const updateSearch = () => {
+        if (!currentStructure) {
+          return;
+        }
+        const query = searchInput.value;
+        updateQueryParam("q", query);
+        renderLevels(currentStructure, currentLanguage, query);
       };
 
       const loadStructure = async (language) => {
@@ -147,8 +254,9 @@
           }
           const data = await response.json();
           document.documentElement.lang = data.language || language;
-          setStatus("", "info");
-          renderLevels(data, data.language || language);
+          currentStructure = data;
+          currentLanguage = data.language || language;
+          renderLevels(data, currentLanguage, searchInput.value);
         } catch (error) {
           setStatus(error.message || "Unable to load lessons.", "error");
         }
@@ -166,15 +274,20 @@
 
       languageSelect.addEventListener("change", (event) => {
         const language = event.target.value;
-        queryParams.set("ln", language);
-        const newUrl = `${window.location.pathname}?${queryParams.toString()}`;
-        window.history.replaceState({}, "", newUrl);
+        updateQueryParam("ln", language);
         loadStructure(language);
+      });
+
+      searchInput.addEventListener("input", () => {
+        updateSearch();
       });
 
       if (!supportedLanguages.find(({ code }) => code === initialLanguage)) {
         queryParams.set("ln", "en");
       }
+
+      const initialSearch = queryParams.get("q") || "";
+      searchInput.value = initialSearch;
 
       loadStructure(queryParams.get("ln") || "en");
     </script>

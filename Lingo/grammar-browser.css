@@ -62,6 +62,11 @@ body {
   min-width: 200px;
 }
 
+.control {
+  display: grid;
+  gap: 8px;
+}
+
 .controls label {
   font-size: 12px;
   text-transform: uppercase;
@@ -70,11 +75,16 @@ body {
   font-weight: 600;
 }
 
-.controls select {
+.controls select,
+.controls input {
   border-radius: 12px;
   border: 1px solid #d6dbe2;
   padding: 10px 12px;
   font-size: 14px;
+}
+
+.controls input[type="search"] {
+  appearance: none;
 }
 
 .status {
@@ -176,6 +186,13 @@ body {
 .lesson-card__link:hover,
 .lesson-card__link:focus {
   text-decoration: underline;
+}
+
+.search-highlight {
+  background: rgb(193, 176, 255);
+  color: #1f2933;
+  padding: 0 2px;
+  border-radius: 6px;
 }
 
 .footer {
