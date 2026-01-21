@@ -54,8 +54,13 @@ app.get("/", (req, res) => {
 
 const lingoDirectory = path.join(__dirname, "Lingo");
 const comingSoonPage = path.join(lingoDirectory, "lesson-coming-soon.html");
+const grammarBrowserPage = path.join(lingoDirectory, "grammar-browser.html");
 
 app.use("/lingo", express.static(lingoDirectory));
+
+app.get(["/grammer", "/grammar"], (req, res) => {
+  res.sendFile(grammarBrowserPage);
+});
 
 app.get("/lingo/:lessonId", (req, res) => {
   const { lessonId } = req.params;
