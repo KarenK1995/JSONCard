@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grammar Lessons</title>
+    <link rel="stylesheet" href="/lingo/grammar-browser.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Lingo</p>
+          <h1>Grammar Lessons</h1>
+          <p class="subtitle">
+            Browse every lesson by level and jump straight into practice.
+          </p>
+        </div>
+        <div class="controls">
+          <label for="language">Language</label>
+          <select id="language" name="language" aria-label="Select language"></select>
+        </div>
+      </header>
+
+      <main>
+        <section class="status" aria-live="polite" data-status></section>
+        <div class="levels" data-levels></div>
+      </main>
+
+      <footer class="footer">
+        <span>Need help? Contact The General Apps team.</span>
+        <span>All lessons are optimized for mobile and desktop.</span>
+      </footer>
+    </div>
+
+    <script>
+      const supportedLanguages = [
+        { code: "en", label: "English" },
+        { code: "ru", label: "Русский" },
+        { code: "uk", label: "Українська" },
+        { code: "es", label: "Español" },
+        { code: "fr", label: "Français" },
+        { code: "ar", label: "العربية" },
+        { code: "tr", label: "Türkçe" },
+        { code: "it", label: "Italiano" },
+        { code: "ro", label: "Română" },
+        { code: "sv", label: "Svenska" },
+        { code: "pt", label: "Português" },
+        { code: "ko", label: "한국어" },
+        { code: "ja", label: "日本語" },
+        { code: "nl", label: "Nederlands" },
+        { code: "zh", label: "中文" },
+        { code: "hr", label: "Hrvatski" },
+        { code: "hy", label: "Հայերեն" },
+      ];
+
+      const statusEl = document.querySelector("[data-status]");
+      const levelsEl = document.querySelector("[data-levels]");
+      const languageSelect = document.querySelector("#language");
+
+      const queryParams = new URLSearchParams(window.location.search);
+      const initialLanguage = (queryParams.get("ln") || "en").toLowerCase();
+
+      const buildLessonUrl = (lessonId, language) => {
+        const url = new URL(`/lingo/${lessonId}`, window.location.origin);
+        url.searchParams.set("ln", language);
+        return url.toString();
+      };
+
+      const setStatus = (message, type = "info") => {
+        statusEl.textContent = message;
+        statusEl.className = `status status--${type}`;
+      };
+
+      const renderLevels = (structure, language) => {
+        levelsEl.innerHTML = "";
+        const levels = structure.levels || [];
+        if (!levels.length) {
+          setStatus("No lessons found yet.", "warning");
+          return;
+        }
+
+        levels.forEach((level) => {
+          const section = document.createElement("section");
+          section.className = "level";
+
+          const header = document.createElement("div");
+          header.className = "level__header";
+
+          const title = document.createElement("h2");
+          title.textContent = `${level.title} (${level.id})`;
+
+          const count = document.createElement("p");
+          const chapters = level.chapters || [];
+          count.textContent = `${chapters.length} lessons`;
+
+          header.appendChild(title);
+          header.appendChild(count);
+          section.appendChild(header);
+
+          const grid = document.createElement("div");
+          grid.className = "lesson-grid";
+
+          chapters.forEach((chapter) => {
+            const card = document.createElement("article");
+            card.className = "lesson-card";
+
+            const cardHeader = document.createElement("div");
+            cardHeader.className = "lesson-card__header";
+
+            const idBadge = document.createElement("span");
+            idBadge.className = "lesson-card__badge";
+            idBadge.textContent = chapter.id;
+
+            const cardTitle = document.createElement("h3");
+            cardTitle.textContent = chapter.title;
+
+            cardHeader.appendChild(idBadge);
+            cardHeader.appendChild(cardTitle);
+
+            const description = document.createElement("p");
+            description.textContent = chapter.description || "";
+
+            const link = document.createElement("a");
+            link.href = buildLessonUrl(chapter.id, language);
+            link.className = "lesson-card__link";
+            link.textContent = "Open lesson";
+
+            card.appendChild(cardHeader);
+            card.appendChild(description);
+            card.appendChild(link);
+            grid.appendChild(card);
+          });
+
+          section.appendChild(grid);
+          levelsEl.appendChild(section);
+        });
+      };
+
+      const loadStructure = async (language) => {
+        setStatus("Loading lessons...", "info");
+        try {
+          const response = await fetch(`/api/lingo/structure?ln=${language}`);
+          if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.message || "Unable to load lessons.");
+          }
+          const data = await response.json();
+          document.documentElement.lang = data.language || language;
+          setStatus("", "info");
+          renderLevels(data, data.language || language);
+        } catch (error) {
+          setStatus(error.message || "Unable to load lessons.", "error");
+        }
+      };
+
+      supportedLanguages.forEach(({ code, label }) => {
+        const option = document.createElement("option");
+        option.value = code;
+        option.textContent = label;
+        if (code === initialLanguage) {
+          option.selected = true;
+        }
+        languageSelect.appendChild(option);
+      });
+
+      languageSelect.addEventListener("change", (event) => {
+        const language = event.target.value;
+        queryParams.set("ln", language);
+        const newUrl = `${window.location.pathname}?${queryParams.toString()}`;
+        window.history.replaceState({}, "", newUrl);
+        loadStructure(language);
+      });
+
+      if (!supportedLanguages.find(({ code }) => code === initialLanguage)) {
+        queryParams.set("ln", "en");
+      }
+
+      loadStructure(queryParams.get("ln") || "en");
+    </script>
+  </body>
+</html>
