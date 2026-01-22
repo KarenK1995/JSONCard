@@ -19,6 +19,7 @@ const SUPPORTED_LANGUAGES = new Set([
   "ro",
   "sv",
   "pt",
+  "fa",
   "ko",
   "ja",
   "nl",
