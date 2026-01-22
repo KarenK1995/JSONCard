@@ -7,6 +7,7 @@
     es: { label: "Español", dir: "ltr" },
     fr: { label: "Français", dir: "ltr" },
     ar: { label: "العربية", dir: "rtl" },
+    fa: { label: "فارسی", dir: "rtl" },
     tr: { label: "Türkçe", dir: "ltr" },
     it: { label: "Italiano", dir: "ltr" },
     ro: { label: "Română", dir: "ltr" },
@@ -851,6 +852,20 @@
     "wrapup.item2.right": "قل كل جملة بصوت عالٍ.",
     "wrapup.item3.left": "3. اكتب",
     "wrapup.item3.right": "لاحظ إجراءات جديدة مع التعلم، العمل، اللعب.",
+  };
+
+  const persian = {
+    ...english,
+    "label.grammar": "دستور زبان",
+    "grammar.title": "نکته دستوری",
+    "grammar.description": "به این موارد ویژه در افعال باقاعده توجه کنید:",
+    "grammar.item1.left": "بن‌هایی که به -t/-d ختم می‌شوند",
+    "grammar.item1.right": "میان آن‌ها -e- بگذارید: du arbeitest, er wartet.",
+    "grammar.item2.left": "افعالی که به -eln/-ern ختم می‌شوند",
+    "grammar.item2.right": "ich sammle → wir sammeln, ich wandere → wir wandern.",
+    "grammar.item3.left": "واضح صحبت کنید",
+    "grammar.item3.right": "روی هر پایان تأکید کنید: lernen, wartest.",
+    "grammar.outro": "با تمرین، جمله‌هایتان به‌طور خودکار روان به نظر می‌رسند.",
   };
 
   const turkish = {
@@ -2174,6 +2189,7 @@
       es: spanish,
       fr: french,
       ar: arabic,
+      fa: persian,
       tr: turkish,
       it: italian,
       ro: romanian,
