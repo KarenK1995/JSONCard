@@ -19,6 +19,7 @@ const language = [
   { label: 'ua', value: 'ua' },
   { label: 'ru', value: 'ru' },
   { label: 'en', value: 'en' },
+  { label: 'fa', value: 'fa' },
 ];
 
   export const UserController = () => {
